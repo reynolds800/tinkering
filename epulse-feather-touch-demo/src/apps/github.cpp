@@ -350,7 +350,7 @@ static void refresh() {
   filter["name"] = true;
   filter["public_repos"] = true;
   filter["followers"] = true;
-  if (platformGithubGet("/users/" + user(), doc, filter) == 200) {
+  if (platformJsonGet("https://api.github.com/users/" + user(), doc, filter) == 200) {
     std::string name;
     for (const char *s = doc["name"] | ""; *s; s++) {
       if (*s >= 32 && *s < 127) name += *s;  // the fonts only cover ASCII

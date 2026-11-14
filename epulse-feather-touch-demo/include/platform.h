@@ -35,7 +35,7 @@ void platformSaveSetting(const char *key, const std::string &value);
 int platformHttpGet(const std::string &url,
                     const std::function<bool(const char *data, size_t size)> &onData);
 
-// Fetches a GitHub API path (e.g. "/users/octocat") into doc, keeping only the
-// fields named in filter. Returns the HTTP status code, -1 if GitHub could not
-// be reached, or -2 if the reply could not be parsed.
-int platformGithubGet(const std::string &path, JsonDocument &doc, const JsonDocument &filter);
+// Fetches a web address that answers in JSON into doc, keeping only the
+// fields named in filter. Returns the HTTP status code, -1 if the server
+// could not be reached, or -2 if the reply could not be parsed.
+int platformJsonGet(const std::string &url, JsonDocument &doc, const JsonDocument &filter);

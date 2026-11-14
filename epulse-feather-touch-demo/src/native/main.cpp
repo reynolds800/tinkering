@@ -176,14 +176,13 @@ int platformHttpGet(const std::string &url,
   return code;
 }
 
-int platformGithubGet(const std::string &path, JsonDocument &doc, const JsonDocument &filter) {
+int platformJsonGet(const std::string &url, JsonDocument &doc, const JsonDocument &filter) {
   std::string body;
-  int code = curlGet("https://api.github.com" + path,
-                     "--header 'Accept: application/vnd.github+json'", body);
+  int code = curlGet(url, "", body);
   if (code == 200) {
     DeserializationError err = deserializeJson(doc, body, DeserializationOption::Filter(filter));
     if (err) {
-      printf("JSON error for %s: %s\n", path.c_str(), err.c_str());
+      printf("JSON error for %s: %s\n", url.c_str(), err.c_str());
       return -2;
     }
   }

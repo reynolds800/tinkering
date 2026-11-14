@@ -93,6 +93,7 @@ void open(const char *label, bool capitalise) {
   symbolPage = false;
   shifted = capitalise;
   layout();
+  lcd.fillRect(0, TOP, lcd.width(), lcd.height() - TOP, colour::background);
   drawAll();
 }
 

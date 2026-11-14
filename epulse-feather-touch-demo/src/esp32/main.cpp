@@ -136,7 +136,7 @@ int platformHttpGet(const std::string &url,
 
 bool platformOnline() { return WiFi.status() == WL_CONNECTED; }
 
-int platformGithubGet(const std::string &path, JsonDocument &doc, const JsonDocument &filter) {
+int platformJsonGet(const std::string &url, JsonDocument &doc, const JsonDocument &filter) {
   WiFiClientSecure client;
   // The server certificate is not verified. Only public, read-only data is
   // requested and no credentials are sent.
@@ -145,8 +145,7 @@ int platformGithubGet(const std::string &path, JsonDocument &doc, const JsonDocu
   HTTPClient http;
   http.useHTTP10(true);  // no chunked encoding, so the body can be parsed as a stream
   http.setTimeout(15000);
-  if (!http.begin(client, ("https://api.github.com" + path).c_str())) return -1;
-  http.addHeader("Accept", "application/vnd.github+json");
+  if (!http.begin(client, url.c_str())) return -1;
   http.setUserAgent("esp32-github-activity-display");
 
   int code = http.GET();
@@ -154,7 +153,7 @@ int platformGithubGet(const std::string &path, JsonDocument &doc, const JsonDocu
     DeserializationError err =
         deserializeJson(doc, http.getStream(), DeserializationOption::Filter(filter));
     if (err) {
-      Serial.printf("JSON error for %s: %s\n", path.c_str(), err.c_str());
+      Serial.printf("JSON error for %s: %s\n", url.c_str(), err.c_str());
       code = -2;
     }
   } else if (code < 0) {

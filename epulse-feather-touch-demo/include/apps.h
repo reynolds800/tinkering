@@ -22,8 +22,10 @@ extern const App calculatorApp;
 extern const App messagesApp;
 extern const App drawingApp;
 extern const App githubApp;
+extern const App weatherApp;
 
 void drawCalculatorIcon(int x, int y);
 void drawMessagesIcon(int x, int y);
 void drawDrawingIcon(int x, int y);
 void drawGithubIcon(int x, int y);
+void drawWeatherIcon(int x, int y);

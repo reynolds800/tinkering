@@ -66,3 +66,24 @@ void drawGithubIcon(int x, int y) {
     lcd.fillSmoothCircle(x + nodes[i][0], y + nodes[i][1], 3, fill);
   }
 }
+
+// Weather: a sky-blue tile with the sun coming out from behind a cloud.
+void drawWeatherIcon(int x, int y) {
+  const uint32_t sun = 0xFFD60Au;
+  const uint32_t cloud = 0xFFFFFFu;
+  tile(x, y, 0x2F9BE8u);
+
+  int sx = x + 48, sy = y + 27;
+  lcd.fillSmoothCircle(sx, sy, 11, sun);
+  const int rays[8][2] = {{0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1}};
+  for (int i = 0; i < 8; i++) {
+    float len = rays[i][0] && rays[i][1] ? 0.707f : 1.0f;  // same length on the diagonals
+    lcd.drawWideLine(sx + (int)(rays[i][0] * 15 * len), sy + (int)(rays[i][1] * 15 * len),
+                     sx + (int)(rays[i][0] * 19 * len), sy + (int)(rays[i][1] * 19 * len), 1.5f, sun);
+  }
+
+  lcd.fillSmoothCircle(x + 24, y + 46, 10, cloud);
+  lcd.fillSmoothCircle(x + 37, y + 38, 13, cloud);
+  lcd.fillSmoothCircle(x + 51, y + 47, 9, cloud);
+  lcd.fillSmoothRoundRect(x + 14, y + 45, 47, 12, 6, cloud);
+}
