@@ -165,3 +165,21 @@ void drawDoublesIcon(int x, int y) {
     }
   }
 }
+
+// Timer: a yellow tile with a stopwatch: a dark ring, a button on top and a
+// red hand.
+void drawTimerIcon(int x, int y) {
+  const uint32_t yellow = 0xFFCC00u, dark = 0x1C1C1Eu, face = 0xFFFFFFu;
+  tile(x, y, yellow);
+  int cx = x + ICON_SIZE / 2, cy = y + ICON_SIZE / 2 + 5;
+  lcd.fillSmoothRoundRect(cx - 5, cy - 31, 10, 9, 2, dark);          // button on top
+  lcd.drawWideLine(cx + 17, cy - 19, cx + 21, cy - 23, 2.0f, dark);  // side button
+  lcd.fillSmoothCircle(cx, cy, 24, dark);
+  lcd.fillSmoothCircle(cx, cy, 19, face);
+  for (int i = 0; i < 4; i++) {  // marks at the quarters
+    int dx = i == 1 ? 1 : i == 3 ? -1 : 0, dy = i == 0 ? -1 : i == 2 ? 1 : 0;
+    lcd.fillSmoothCircle(cx + dx * 15, cy + dy * 15, 1, dark);
+  }
+  lcd.drawWideLine(cx, cy, cx + 9, cy - 10, 1.6f, 0xFF453Au);
+  lcd.fillSmoothCircle(cx, cy, 3, dark);
+}

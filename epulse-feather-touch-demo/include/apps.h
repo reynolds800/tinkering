@@ -27,6 +27,11 @@ extern const App calendarApp;
 extern const App worldClockApp;
 extern const App mapsApp;
 extern const App doublesApp;
+extern const App timerApp;
+
+// Brings an app to the front, closing whichever is open. For an app that
+// needs attention while it is not on show, such as a timer finishing.
+void shellOpen(const App &app);
 
 void drawCalculatorIcon(int x, int y);
 void drawMessagesIcon(int x, int y);
@@ -37,3 +42,4 @@ void drawCalendarIcon(int x, int y);
 void drawWorldClockIcon(int x, int y);
 void drawMapsIcon(int x, int y);
 void drawDoublesIcon(int x, int y);
+void drawTimerIcon(int x, int y);

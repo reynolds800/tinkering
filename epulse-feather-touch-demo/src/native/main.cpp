@@ -12,8 +12,9 @@
 //   program --drag 40,100,200,300 ...
 //                                 press at the first position, slide to the
 //                                 second and lift; mixes with --tap in order
-//   program --wait 2000 ...       keep running that many milliseconds after
-//                                 the taps, before the screenshot
+//   program --wait 2000 ...       keep running for that many milliseconds at
+//                                 that point; mixes with --tap and --drag in
+//                                 order, and may be repeated
 
 #include <SDL2/SDL.h>
 #include <arpa/inet.h>
@@ -37,12 +38,13 @@
 extern Display lcd;
 
 static std::string screenshotPath;
-// Scripted touches: a tap is a drag that starts and ends in the same place.
+// A scripted step: a touch, or a pause. A tap is a drag that starts and ends
+// in the same place.
 struct Gesture {
   int x0, y0, x1, y1;
+  int waitMs;  // above zero for a pause, in which case the positions are unused
 };
 static std::vector<Gesture> gestures;
-static int waitMs = 0;
 static std::string deviceName = "Simulator";
 
 static const uint16_t CHAT_PORT = 47800;
@@ -213,13 +215,14 @@ static bool saveScreenshot(const std::string &path) {
 static int runApp(bool *running) {
   appSetup();
   for (auto &g : gestures) {
-    if (g.x0 == g.x1 && g.y0 == g.y1) {
+    if (g.waitMs > 0) {
+      for (uint32_t start = SDL_GetTicks(); SDL_GetTicks() - start < (uint32_t)g.waitMs;) appLoop();
+    } else if (g.x0 == g.x1 && g.y0 == g.y1) {
       appTap(g.x0, g.y0);
     } else {
       appDrag(g.x0, g.y0, g.x1, g.y1);
     }
   }
-  for (uint32_t start = SDL_GetTicks(); SDL_GetTicks() - start < (uint32_t)waitMs;) appLoop();
   if (!screenshotPath.empty()) {
     bool ok = saveScreenshot(screenshotPath);
     printf(ok ? "Saved %s\n" : "Could not save %s\n", screenshotPath.c_str());
@@ -236,14 +239,14 @@ int main(int argc, char **argv) {
     if (arg == "--screenshot" && i + 1 < argc) {
       screenshotPath = argv[++i];
     } else if (arg == "--tap" && i + 1 < argc && sscanf(argv[i + 1], "%d,%d", &x, &y) == 2) {
-      gestures.push_back({x, y, x, y});
+      gestures.push_back({x, y, x, y, 0});
       i++;
     } else if (arg == "--drag" && i + 1 < argc &&
                sscanf(argv[i + 1], "%d,%d,%d,%d", &x, &y, &x1, &y1) == 4) {
-      gestures.push_back({x, y, x1, y1});
+      gestures.push_back({x, y, x1, y1, 0});
       i++;
     } else if (arg == "--wait" && i + 1 < argc) {
-      waitMs = atoi(argv[++i]);
+      gestures.push_back({0, 0, 0, 0, atoi(argv[++i])});
     } else if (arg == "--battery" && i + 1 < argc) {
       batteryPercent = atoi(argv[++i]);
     } else if (arg == "--name" && i + 1 < argc) {
@@ -251,7 +254,7 @@ int main(int argc, char **argv) {
     } else if (arg == "--peer" && i + 1 < argc && inet_addr(argv[i + 1]) != INADDR_NONE) {
       rememberPeer(inet_addr(argv[++i]));
     } else {
-      fprintf(stderr, "Usage: %s [--battery percent] [--name text] [--peer address] [--tap x,y]... [--drag x0,y0,x1,y1]... [--wait ms] [--screenshot file.bmp]\n",
+      fprintf(stderr, "Usage: %s [--battery percent] [--name text] [--peer address] [--tap x,y]... [--drag x0,y0,x1,y1]... [--wait ms]... [--screenshot file.bmp]\n",
               argv[0]);
       return 2;
     }

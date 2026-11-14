@@ -20,9 +20,11 @@ static const int GRID_LEFT = (SCREEN_W - COLS * CELL_W) / 2;
 
 static const App *const slots[COLS * ROWS] = {&calculatorApp, &messagesApp, &drawingApp,
                                               &githubApp,     &weatherApp,  &calendarApp,
-                                              &worldClockApp, &mapsApp,     &doublesApp};
+                                              &worldClockApp, &mapsApp,     &doublesApp,
+                                              &timerApp};
 
 static const App *current = nullptr;  // the open app, or nullptr on the home screen
+static const App *requested = nullptr;  // an app that has asked to come to the front
 static std::string shownClock;
 static int shownBadges = 0;
 static int shownBattery = -1;
@@ -111,11 +113,23 @@ static void goHome() {
   drawHome();
 }
 
+void shellOpen(const App &app) { requested = &app; }
+
 // ---------- main loop ----------
 
 static void step(const Touch &touch) {
   for (const App *app : slots) {
     if (app && app->background) app->background();
+  }
+  if (requested) {
+    // Done here, between an app's turns, so no app is closed mid-task.
+    const App *app = requested;
+    requested = nullptr;
+    if (current != app) {
+      if (current && current->leave) current->leave();
+      open(app);
+      return;
+    }
   }
   if (!current && totalBadges() != shownBadges) {
     shownBadges = totalBadges();
