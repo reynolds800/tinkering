@@ -2,11 +2,14 @@
 // computer's own network connection and the curl command for HTTPS.
 //
 //   program                       open a window; click to "tap" the screen
-//   program --screenshot out.bmp  draw once, save the screen and exit
+//   program --tap 50,90 --screenshot out.bmp
+//                                 tap those positions in order, save the
+//                                 screen and exit (--tap may be repeated)
 
 #include <SDL2/SDL.h>
 #include <cstdio>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "app.h"
@@ -16,10 +19,11 @@
 extern Display lcd;
 
 static std::string screenshotPath;
+static std::vector<std::pair<int, int>> taps;
+
+void platformBegin() {}
 
 std::string platformNetworkName() { return "the internet"; }
-
-bool platformConnect() { return true; }
 
 bool platformOnline() { return true; }
 
@@ -69,6 +73,7 @@ static bool saveScreenshot(const std::string &path) {
 
 static int runApp(bool *running) {
   appSetup();
+  for (auto &tap : taps) appTap(tap.first, tap.second);
   if (!screenshotPath.empty()) {
     bool ok = saveScreenshot(screenshotPath);
     printf(ok ? "Saved %s\n" : "Could not save %s\n", screenshotPath.c_str());
@@ -81,10 +86,14 @@ static int runApp(bool *running) {
 int main(int argc, char **argv) {
   for (int i = 1; i < argc; i++) {
     std::string arg = argv[i];
+    int x, y;
     if (arg == "--screenshot" && i + 1 < argc) {
       screenshotPath = argv[++i];
+    } else if (arg == "--tap" && i + 1 < argc && sscanf(argv[i + 1], "%d,%d", &x, &y) == 2) {
+      taps.emplace_back(x, y);
+      i++;
     } else {
-      fprintf(stderr, "Usage: %s [--screenshot file.bmp]\n", argv[0]);
+      fprintf(stderr, "Usage: %s [--tap x,y]... [--screenshot file.bmp]\n", argv[0]);
       return 2;
     }
   }

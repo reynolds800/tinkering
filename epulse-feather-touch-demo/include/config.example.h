@@ -10,3 +10,7 @@
 // How often to refresh. Unauthenticated GitHub API calls are limited to 60 per
 // hour per IP address and each refresh makes two calls.
 #define REFRESH_MINUTES 5
+
+// Timezone for the clock, as a POSIX TZ string. Sydney would be
+// "AEST-10AEDT,M10.1.0,M4.1.0/3". The simulator uses the computer's timezone.
+#define TIMEZONE "UTC0"

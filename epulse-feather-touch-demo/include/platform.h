@@ -1,15 +1,15 @@
-// What the app needs from whatever it is running on. Implemented in
+// What the apps need from whatever they are running on. Implemented in
 // src/esp32/ for the device and src/native/ for the simulator.
 #pragma once
 
 #include <ArduinoJson.h>
 #include <string>
 
+// Starts joining the network and setting the clock, without waiting for either.
+void platformBegin();
+
 // Name of the network being joined, for status messages.
 std::string platformNetworkName();
-
-// Joins the network and sets the clock. Returns false if that failed.
-bool platformConnect();
 
 bool platformOnline();
 

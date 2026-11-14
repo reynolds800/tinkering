@@ -12,21 +12,12 @@
 
 std::string platformNetworkName() { return "WiFi " WIFI_SSID; }
 
-bool platformConnect() {
+void platformBegin() {
   WiFi.mode(WIFI_STA);
   WiFi.setAutoReconnect(true);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  uint32_t start = millis();
-  while (WiFi.status() != WL_CONNECTED && millis() - start < 20000) {
-    delay(250);
-  }
-  if (WiFi.status() != WL_CONNECTED) return false;
-
-  Serial.printf("WiFi connected: %s\n", WiFi.localIP().toString().c_str());
-  configTime(0, 0, "pool.ntp.org", "time.google.com");
-  struct tm now;
-  getLocalTime(&now, 5000);  // wait briefly for the clock so event ages can be shown
-  return true;
+  // The clock sets itself from the internet once WiFi has joined.
+  configTzTime(TIMEZONE, "pool.ntp.org", "time.google.com");
 }
 
 bool platformOnline() { return WiFi.status() == WL_CONNECTED; }

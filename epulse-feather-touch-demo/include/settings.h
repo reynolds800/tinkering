@@ -9,3 +9,7 @@
 #else
 #error "Copy include/config.example.h to include/config.h and fill in your WiFi details"
 #endif
+
+#ifndef TIMEZONE
+#define TIMEZONE "UTC0"
+#endif
