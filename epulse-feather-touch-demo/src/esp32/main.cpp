@@ -84,7 +84,8 @@ void platformBegin() {
 std::string platformLoadSetting(const char *key) {
   Preferences store;
   store.begin("epulse", true);
-  std::string value = store.getString(key, "").c_str();
+  // Asking for a setting that was never saved logs an error, so check first.
+  std::string value = store.isKey(key) ? store.getString(key, "").c_str() : "";
   store.end();
   return value;
 }

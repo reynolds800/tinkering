@@ -87,3 +87,23 @@ void drawWeatherIcon(int x, int y) {
   lcd.fillSmoothCircle(x + 51, y + 47, 9, cloud);
   lcd.fillSmoothRoundRect(x + 14, y + 45, 47, 12, 6, cloud);
 }
+
+// Calendar: a white page with a red binding across the top, two rings, and
+// rows of days with one picked out.
+void drawCalendarIcon(int x, int y) {
+  const uint32_t red = 0xFF453Au;
+  tile(x, y, 0xFFFFFFu);
+  // The red top: a rounded tile, with its lower part covered back over in white.
+  lcd.fillSmoothRoundRect(x, y, ICON_SIZE, 36, CORNER, red);
+  lcd.fillRect(x, y + 22, ICON_SIZE, 14, 0xFFFFFFu);
+  for (int i = 0; i < 2; i++) {
+    lcd.fillSmoothRoundRect(x + 20 + i * 30, y + 5, 6, 12, 3, 0xFFFFFFu);
+  }
+  for (int row = 0; row < 3; row++) {
+    for (int col = 0; col < 4; col++) {
+      bool picked = row == 1 && col == 2;
+      lcd.fillSmoothRoundRect(x + 11 + col * 14, y + 29 + row * 13, 10, 9, 2,
+                              picked ? red : 0xC7C7CCu);
+    }
+  }
+}
