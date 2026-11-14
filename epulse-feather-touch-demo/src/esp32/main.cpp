@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <HTTPClient.h>
+#include <Preferences.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <WiFiUdp.h>
@@ -78,6 +79,59 @@ void platformBegin() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   // The clock sets itself from the internet once WiFi has joined.
   configTzTime(TIMEZONE, "pool.ntp.org", "time.google.com");
+}
+
+std::string platformLoadSetting(const char *key) {
+  Preferences store;
+  store.begin("epulse", true);
+  std::string value = store.getString(key, "").c_str();
+  store.end();
+  return value;
+}
+
+void platformSaveSetting(const char *key, const std::string &value) {
+  Preferences store;
+  store.begin("epulse", false);
+  store.putString(key, value.c_str());
+  store.end();
+}
+
+int platformHttpGet(const std::string &url,
+                    const std::function<bool(const char *data, size_t size)> &onData) {
+  WiFiClientSecure client;
+  // The server certificate is not verified. Only public pages are requested
+  // and no credentials are sent.
+  client.setInsecure();
+
+  HTTPClient http;
+  http.useHTTP10(true);  // no chunked encoding, so the body arrives as plain bytes
+  http.setTimeout(15000);
+  if (!http.begin(client, url.c_str())) return -1;
+  http.setUserAgent("esp32-github-activity-display");
+
+  int code = http.GET();
+  if (code < 0) code = -1;
+  if (code == HTTP_CODE_OK) {
+    WiFiClient *stream = http.getStreamPtr();
+    int remaining = http.getSize();  // -1 when the server does not say
+    static char buf[1024];
+    uint32_t lastData = millis();
+    while (remaining != 0 && (http.connected() || stream->available())) {
+      int available = stream->available();
+      if (available <= 0) {
+        if (millis() - lastData > 15000) break;  // stalled
+        delay(2);
+        continue;
+      }
+      int n = stream->readBytes(buf, min(available, (int)sizeof(buf)));
+      if (n <= 0) break;
+      lastData = millis();
+      if (remaining > 0) remaining -= n;
+      if (!onData(buf, n)) break;
+    }
+  }
+  http.end();
+  return code;
 }
 
 bool platformOnline() { return WiFi.status() == WL_CONNECTED; }

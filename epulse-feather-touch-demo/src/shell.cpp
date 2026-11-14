@@ -8,18 +8,6 @@
 #include "apps.h"
 #include "platform.h"
 
-// ---------- apps that are not built yet ----------
-
-static void comingSoonEnter() {
-  lcd.setTextDatum(middle_center);
-  lcd.setTextColor(colour::dim);
-  lcd.drawString("Coming soon", lcd.width() / 2, lcd.height() / 2, &fonts::DejaVu18);
-}
-
-static void comingSoonUpdate(const Touch &) {}
-
-static const App githubApp = {"GitHub", drawGithubIcon, comingSoonEnter, comingSoonUpdate};
-
 // ---------- home screen ----------
 
 // A 3 x 4 grid of app slots under a strip showing the time.

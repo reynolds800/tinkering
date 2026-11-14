@@ -20,7 +20,11 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <algorithm>
 #include <cstdio>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -114,35 +118,76 @@ std::string platformNetworkName() { return "the internet"; }
 
 bool platformOnline() { return true; }
 
-int platformGithubGet(const std::string &path, JsonDocument &doc, const JsonDocument &filter) {
-  // The path is built from our own settings, but it still goes through a shell.
-  if (path.find('\'') != std::string::npos) return -1;
-  std::string command =
-      "curl --silent --max-time 15 --user-agent simulator-github-activity-display "
-      "--header 'Accept: application/vnd.github+json' --write-out '\\n%{http_code}' "
-      "'https://api.github.com" + path + "'";
+// Settings are kept as one small file each, under ~/.config/epulse-simulator.
+static std::filesystem::path settingPath(const char *key) {
+  const char *config = getenv("XDG_CONFIG_HOME");
+  const char *home = getenv("HOME");
+  std::filesystem::path dir = config && *config ? std::filesystem::path(config)
+                                                : std::filesystem::path(home ? home : ".") / ".config";
+  return dir / "epulse-simulator" / key;
+}
 
+std::string platformLoadSetting(const char *key) {
+  std::ifstream file(settingPath(key));
+  std::string value;
+  std::getline(file, value);
+  return value;
+}
+
+void platformSaveSetting(const char *key, const std::string &value) {
+  std::error_code ignored;
+  std::filesystem::create_directories(settingPath(key).parent_path(), ignored);
+  std::ofstream(settingPath(key)) << value << "\n";
+}
+
+// Runs curl and returns the HTTP status code, with the page in body.
+static int curlGet(const std::string &url, const std::string &extraArgs, std::string &body) {
+  // The address is built from our own settings, but it still goes through a shell.
+  if (url.find('\'') != std::string::npos) return -1;
+  std::string command = "curl --silent --max-time 20 --user-agent simulator-github-activity-display " +
+                        extraArgs + " --write-out '\\n%{http_code}' '" + url + "'";
   FILE *pipe = popen(command.c_str(), "r");
   if (!pipe) return -1;
-  std::string output;
+  body.clear();
   char buf[4096];
   size_t n;
-  while ((n = fread(buf, 1, sizeof(buf), pipe)) > 0) output.append(buf, n);
+  while ((n = fread(buf, 1, sizeof(buf), pipe)) > 0) body.append(buf, n);
   if (pclose(pipe) != 0) return -1;
 
   // curl appends the HTTP status code on a final line of its own.
-  size_t split = output.rfind('\n');
+  size_t split = body.rfind('\n');
   if (split == std::string::npos) return -1;
-  int code = atoi(output.c_str() + split + 1);
+  int code = atoi(body.c_str() + split + 1);
+  body.resize(split);
+  return code > 0 ? code : -1;
+}
+
+int platformHttpGet(const std::string &url,
+                    const std::function<bool(const char *data, size_t size)> &onData) {
+  std::string body;
+  int code = curlGet(url, "", body);
   if (code == 200) {
-    output.resize(split);
-    DeserializationError err = deserializeJson(doc, output, DeserializationOption::Filter(filter));
+    // Hand the page over in odd-sized pieces, as the device's network would.
+    const size_t piece = 700;
+    for (size_t at = 0; at < body.size(); at += piece) {
+      if (!onData(body.data() + at, std::min(piece, body.size() - at))) break;
+    }
+  }
+  return code;
+}
+
+int platformGithubGet(const std::string &path, JsonDocument &doc, const JsonDocument &filter) {
+  std::string body;
+  int code = curlGet("https://api.github.com" + path,
+                     "--header 'Accept: application/vnd.github+json'", body);
+  if (code == 200) {
+    DeserializationError err = deserializeJson(doc, body, DeserializationOption::Filter(filter));
     if (err) {
       printf("JSON error for %s: %s\n", path.c_str(), err.c_str());
       return -2;
     }
   }
-  return code > 0 ? code : -1;
+  return code;
 }
 
 static bool saveScreenshot(const std::string &path) {
