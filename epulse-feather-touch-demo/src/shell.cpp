@@ -18,7 +18,6 @@ static void comingSoonEnter() {
 
 static void comingSoonUpdate(const Touch &) {}
 
-static const App drawingApp = {"Drawing", drawDrawingIcon, comingSoonEnter, comingSoonUpdate};
 static const App githubApp = {"GitHub", drawGithubIcon, comingSoonEnter, comingSoonUpdate};
 
 // ---------- home screen ----------
@@ -164,6 +163,24 @@ void appLoop() {
   }
   step(touch);
   lgfx::delay(10);
+}
+
+void appDrag(int x0, int y0, int x1, int y1) {
+  Touch touch;
+  touch.x = x0;
+  touch.y = y0;
+  touch.down = touch.pressed = true;
+  step(touch);
+  touch.pressed = false;
+  const int steps = 12;
+  for (int i = 1; i <= steps; i++) {
+    touch.x = x0 + (x1 - x0) * i / steps;
+    touch.y = y0 + (y1 - y0) * i / steps;
+    step(touch);
+  }
+  touch.down = false;
+  touch.released = true;
+  step(touch);
 }
 
 void appTap(int x, int y) {

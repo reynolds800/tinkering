@@ -20,6 +20,7 @@ struct App {
 
 extern const App calculatorApp;
 extern const App messagesApp;
+extern const App drawingApp;
 
 void drawCalculatorIcon(int x, int y);
 void drawMessagesIcon(int x, int y);
