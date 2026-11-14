@@ -107,3 +107,22 @@ void drawCalendarIcon(int x, int y) {
     }
   }
 }
+
+// World Clock: a teal tile with a clock face that is also a globe, its
+// hands showing ten past ten.
+void drawWorldClockIcon(int x, int y) {
+  const uint32_t face = 0xFFFFFFu, line = 0x9AD8D0u, hand = 0x0B3B37u;
+  tile(x, y, 0x12A594u);
+  int cx = x + ICON_SIZE / 2, cy = y + ICON_SIZE / 2;
+  lcd.fillSmoothCircle(cx, cy, 27, face);
+
+  // The globe: an equator, two lines of latitude and a curved meridian pair.
+  lcd.drawFastHLine(cx - 26, cy, 53, line);
+  lcd.drawFastHLine(cx - 22, cy - 14, 45, line);
+  lcd.drawFastHLine(cx - 22, cy + 14, 45, line);
+  lcd.drawEllipse(cx, cy, 12, 26, line);
+
+  lcd.drawWideLine(cx, cy, cx - 9, cy - 9, 2.0f, hand);   // hour hand
+  lcd.drawWideLine(cx, cy, cx + 8, cy - 17, 1.4f, hand);  // minute hand
+  lcd.fillSmoothCircle(cx, cy, 3, 0xFF9500u);
+}
