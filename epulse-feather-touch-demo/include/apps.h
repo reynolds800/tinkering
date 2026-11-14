@@ -11,9 +11,15 @@ struct App {
   void (*drawIcon)(int x, int y);    // ICON_SIZE square with its top-left at x, y
   void (*enter)();                   // draw the screen below the title bar
   void (*update)(const Touch &touch);  // called continuously while the app is open
+
+  // Optional; leave out any that are not needed.
+  void (*leave)();       // the app is being closed
+  void (*background)();  // called continuously, whether or not the app is open
+  int (*badge)();        // number to show on the home screen logo, 0 for none
 };
 
 extern const App calculatorApp;
+extern const App messagesApp;
 
 void drawCalculatorIcon(int x, int y);
 void drawMessagesIcon(int x, int y);

@@ -2,11 +2,19 @@
 // computer's own network connection and the curl command for HTTPS.
 //
 //   program                       open a window; click to "tap" the screen
+//   program --name Bob            the name shown on messages sent from here
 //   program --tap 50,90 --screenshot out.bmp
 //                                 tap those positions in order, save the
 //                                 screen and exit (--tap may be repeated)
+//   program --wait 2000 ...       keep running that many milliseconds after
+//                                 the taps, before the screenshot
 
 #include <SDL2/SDL.h>
+#include <arpa/inet.h>
+#include <fcntl.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
 #include <cstdio>
 #include <string>
 #include <utility>
@@ -20,6 +28,57 @@ extern Display lcd;
 
 static std::string screenshotPath;
 static std::vector<std::pair<int, int>> taps;
+static int waitMs = 0;
+static std::string deviceName = "Simulator";
+
+static const uint16_t CHAT_PORT = 47800;
+
+std::string platformDeviceName() { return deviceName; }
+
+// One UDP socket, shared for sending and receiving. Address and port reuse
+// let several simulators on one computer all hear the same broadcasts.
+static int chatSocket() {
+  static int fd = -2;
+  if (fd != -2) return fd;
+  fd = socket(AF_INET, SOCK_DGRAM, 0);
+  if (fd < 0) return fd;
+  int on = 1;
+  setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
+  setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on));
+  setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &on, sizeof(on));
+  fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
+  sockaddr_in addr = {};
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  addr.sin_port = htons(CHAT_PORT);
+  if (bind(fd, (sockaddr *)&addr, sizeof(addr)) != 0) {
+    perror("Messages: could not listen on the network");
+    close(fd);
+    fd = -1;
+  }
+  return fd;
+}
+
+bool platformChatSend(const std::string &packet) {
+  int fd = chatSocket();
+  if (fd < 0) return false;
+  sockaddr_in to = {};
+  to.sin_family = AF_INET;
+  to.sin_addr.s_addr = htonl(INADDR_BROADCAST);
+  to.sin_port = htons(CHAT_PORT);
+  return sendto(fd, packet.data(), packet.size(), 0, (sockaddr *)&to, sizeof(to)) ==
+         (ssize_t)packet.size();
+}
+
+bool platformChatReceive(std::string &packet) {
+  int fd = chatSocket();
+  if (fd < 0) return false;
+  char buf[512];
+  ssize_t n = recv(fd, buf, sizeof(buf), 0);
+  if (n <= 0) return false;
+  packet.assign(buf, n);
+  return true;
+}
 
 void platformBegin() {}
 
@@ -74,6 +133,7 @@ static bool saveScreenshot(const std::string &path) {
 static int runApp(bool *running) {
   appSetup();
   for (auto &tap : taps) appTap(tap.first, tap.second);
+  for (uint32_t start = SDL_GetTicks(); SDL_GetTicks() - start < (uint32_t)waitMs;) appLoop();
   if (!screenshotPath.empty()) {
     bool ok = saveScreenshot(screenshotPath);
     printf(ok ? "Saved %s\n" : "Could not save %s\n", screenshotPath.c_str());
@@ -92,8 +152,13 @@ int main(int argc, char **argv) {
     } else if (arg == "--tap" && i + 1 < argc && sscanf(argv[i + 1], "%d,%d", &x, &y) == 2) {
       taps.emplace_back(x, y);
       i++;
+    } else if (arg == "--wait" && i + 1 < argc) {
+      waitMs = atoi(argv[++i]);
+    } else if (arg == "--name" && i + 1 < argc) {
+      deviceName = argv[++i];
     } else {
-      fprintf(stderr, "Usage: %s [--tap x,y]... [--screenshot file.bmp]\n", argv[0]);
+      fprintf(stderr, "Usage: %s [--name text] [--tap x,y]... [--wait ms] [--screenshot file.bmp]\n",
+              argv[0]);
       return 2;
     }
   }

@@ -18,7 +18,6 @@ static void comingSoonEnter() {
 
 static void comingSoonUpdate(const Touch &) {}
 
-static const App messagesApp = {"Messages", drawMessagesIcon, comingSoonEnter, comingSoonUpdate};
 static const App drawingApp = {"Drawing", drawDrawingIcon, comingSoonEnter, comingSoonUpdate};
 static const App githubApp = {"GitHub", drawGithubIcon, comingSoonEnter, comingSoonUpdate};
 
@@ -37,6 +36,7 @@ static const App *const slots[COLS * ROWS] = {&calculatorApp, &messagesApp, &dra
 
 static const App *current = nullptr;  // the open app, or nullptr on the home screen
 static std::string shownClock;
+static int shownBadges = 0;
 
 static int iconX(int slot) { return GRID_LEFT + (slot % COLS) * CELL_W + (CELL_W - ICON_SIZE) / 2; }
 static int iconY(int slot) { return HOME_TOP + (slot / COLS) * CELL_H + 6; }
@@ -59,6 +59,14 @@ static void drawHome() {
       lcd.setTextDatum(top_center);
       lcd.setTextColor(colour::text);
       lcd.drawString(slots[i]->name, x + ICON_SIZE / 2, y + ICON_SIZE + 6, &fonts::DejaVu12);
+      int count = slots[i]->badge ? slots[i]->badge() : 0;
+      if (count > 0) {  // red counter on the logo's top-right corner
+        int bx = x + ICON_SIZE - 6, by = y + 6;
+        lcd.fillSmoothCircle(bx, by, 11, colour::red);
+        lcd.setTextDatum(middle_center);
+        lcd.drawString(count > 9 ? "9+" : std::to_string(count).c_str(), bx, by + 1,
+                       &fonts::DejaVu12);
+      }
     } else {
       lcd.drawRoundRect(x, y, ICON_SIZE, ICON_SIZE, 18, colour::bar);  // empty slot
     }
@@ -76,15 +84,34 @@ static void open(const App *app) {
   lcd.endWrite();
 }
 
+// Adds up every app's badge, to notice when the home screen needs redrawing.
+static int totalBadges() {
+  int total = 0;
+  for (const App *app : slots) {
+    if (app && app->badge) total += app->badge();
+  }
+  return total;
+}
+
 static void goHome() {
   printf("Back to home\n");
+  if (current->leave) current->leave();
   current = nullptr;
+  shownBadges = totalBadges();
   drawHome();
 }
 
 // ---------- main loop ----------
 
 static void step(const Touch &touch) {
+  for (const App *app : slots) {
+    if (app && app->background) app->background();
+  }
+  if (!current && totalBadges() != shownBadges) {
+    shownBadges = totalBadges();
+    drawHome();
+  }
+
   std::string now = clockText();
   if (now != shownClock) {
     shownClock = now;
