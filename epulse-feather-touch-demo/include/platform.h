@@ -14,6 +14,9 @@ std::string platformNetworkName();
 
 bool platformOnline();
 
+// How full the battery is, from 0 to 100, or -1 if that is not known.
+int platformBatteryPercent();
+
 // What this device calls itself to others on the network.
 std::string platformDeviceName();
 

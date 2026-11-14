@@ -25,21 +25,43 @@ static const App *const slots[COLS * ROWS] = {&calculatorApp, &messagesApp, &dra
 static const App *current = nullptr;  // the open app, or nullptr on the home screen
 static std::string shownClock;
 static int shownBadges = 0;
+static int shownBattery = -1;
 
 static int iconX(int slot) { return GRID_LEFT + (slot % COLS) * CELL_W + (CELL_W - ICON_SIZE) / 2; }
 static int iconY(int slot) { return HOME_TOP + (slot / COLS) * CELL_H + 6; }
 
-static void drawHomeClock() {
+// The strip across the top of the home screen: the time in the middle and
+// the battery level on the right.
+static void drawHomeStatus() {
   lcd.fillRect(0, 0, lcd.width(), HOME_TOP, colour::background);
+  int cy = HOME_TOP / 2 + 2;
   lcd.setTextDatum(middle_center);
   lcd.setTextColor(colour::text);
-  lcd.drawString(clockText().c_str(), lcd.width() / 2, HOME_TOP / 2 + 2, &fonts::DejaVu18);
+  lcd.drawString(clockText().c_str(), lcd.width() / 2, cy, &fonts::DejaVu18);
+
+  int percent = platformBatteryPercent();
+  shownBattery = percent;
+  if (percent < 0) return;  // no reading, so nothing to show
+
+  // A battery outline with a nub on the end, filled in proportion.
+  const int w = 26, h = 13;
+  int x = lcd.width() - 12 - w, y = cy - h / 2 - 1;
+  uint32_t fill = percent <= 10 ? colour::red : percent <= 20 ? colour::orange : colour::green;
+  lcd.drawRoundRect(x, y, w, h, 3, colour::dim);
+  lcd.fillRect(x + w, y + 4, 2, h - 8, colour::dim);
+  int inner = (w - 4) * percent / 100;
+  if (percent > 0 && inner < 2) inner = 2;  // keep a sliver visible until it is truly empty
+  lcd.fillRect(x + 2, y + 2, inner, h - 4, fill);
+
+  lcd.setTextDatum(middle_right);
+  lcd.setTextColor(colour::text);
+  lcd.drawString((std::to_string(percent) + "%").c_str(), x - 5, cy, &fonts::DejaVu12);
 }
 
 static void drawHome() {
   lcd.startWrite();
   lcd.fillScreen(colour::background);
-  drawHomeClock();
+  drawHomeStatus();
   for (int i = 0; i < COLS * ROWS; i++) {
     int x = iconX(i), y = iconY(i);
     if (slots[i]) {
@@ -106,9 +128,10 @@ static void step(const Touch &touch) {
     if (current) {
       drawTitleClock();
     } else {
-      drawHomeClock();
+      drawHomeStatus();
     }
   }
+  if (!current && platformBatteryPercent() != shownBattery) drawHomeStatus();
 
   if (!current) {
     if (!touch.pressed) return;

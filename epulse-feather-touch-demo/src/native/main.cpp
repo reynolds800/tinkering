@@ -2,6 +2,7 @@
 // computer's own network connection and the curl command for HTTPS.
 //
 //   program                       open a window; click to "tap" the screen
+//   program --battery 76          pretend the battery is at this level
 //   program --name Bob            the name shown on messages sent from here
 //   program --peer 192.168.4.141  also send messages directly to this address,
 //                                 for a device on a different part of the network
@@ -47,6 +48,11 @@ static std::string deviceName = "Simulator";
 static const uint16_t CHAT_PORT = 47800;
 
 std::string platformDeviceName() { return deviceName; }
+
+// The computer has no battery to measure, so the level is whatever was
+// given with --battery, or unknown.
+static int batteryPercent = -1;
+int platformBatteryPercent() { return batteryPercent; }
 
 // Addresses to send to directly: any given with --peer, plus any that packets
 // have arrived from.
@@ -238,12 +244,14 @@ int main(int argc, char **argv) {
       i++;
     } else if (arg == "--wait" && i + 1 < argc) {
       waitMs = atoi(argv[++i]);
+    } else if (arg == "--battery" && i + 1 < argc) {
+      batteryPercent = atoi(argv[++i]);
     } else if (arg == "--name" && i + 1 < argc) {
       deviceName = argv[++i];
     } else if (arg == "--peer" && i + 1 < argc && inet_addr(argv[i + 1]) != INADDR_NONE) {
       rememberPeer(inet_addr(argv[++i]));
     } else {
-      fprintf(stderr, "Usage: %s [--name text] [--peer address] [--tap x,y]... [--drag x0,y0,x1,y1]... [--wait ms] [--screenshot file.bmp]\n",
+      fprintf(stderr, "Usage: %s [--battery percent] [--name text] [--peer address] [--tap x,y]... [--drag x0,y0,x1,y1]... [--wait ms] [--screenshot file.bmp]\n",
               argv[0]);
       return 2;
     }
