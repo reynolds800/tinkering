@@ -20,7 +20,7 @@ static const int GRID_LEFT = (SCREEN_W - COLS * CELL_W) / 2;
 
 static const App *const slots[COLS * ROWS] = {&calculatorApp, &messagesApp, &drawingApp,
                                               &githubApp,     &weatherApp,  &calendarApp,
-                                              &worldClockApp, &mapsApp};
+                                              &worldClockApp, &mapsApp,     &doublesApp};
 
 static const App *current = nullptr;  // the open app, or nullptr on the home screen
 static std::string shownClock;

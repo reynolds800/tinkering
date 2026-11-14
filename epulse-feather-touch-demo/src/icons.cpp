@@ -144,3 +144,24 @@ void drawMapsIcon(int x, int y) {
   lcd.fillSmoothCircle(px, py, 11, pin);
   lcd.fillSmoothCircle(px, py, 4, 0xFFFFFFu);
 }
+
+// Doubles: a navy tile holding four game tiles, each with twice the dots of
+// the one before.
+void drawDoublesIcon(int x, int y) {
+  const uint32_t tiles[4] = {0x1F6378u, 0x23A877u, 0xF2A53Au, 0xE8476Au};
+  const int dots[4] = {1, 2, 4, 8};
+  tile(x, y, 0x15203Au);
+  for (int i = 0; i < 4; i++) {
+    int tx = x + 10 + (i % 2) * 30, ty = y + 10 + (i / 2) * 30;
+    lcd.fillSmoothRoundRect(tx, ty, 26, 26, 6, tiles[i]);
+    // Dots sit in a grid: one row for 1 or 2, two rows for 4 and 8.
+    int rows = dots[i] > 2 ? 2 : 1, perRow = dots[i] / rows;
+    for (int r = 0; r < rows; r++) {
+      for (int c = 0; c < perRow; c++) {
+        int dx = tx + 13 + (int)((c - (perRow - 1) / 2.0f) * (perRow > 2 ? 5 : 8));
+        int dy = ty + 13 + (int)((r - (rows - 1) / 2.0f) * 8);
+        lcd.fillSmoothCircle(dx, dy, perRow > 2 ? 1 : 2, 0xFFFFFFu);
+      }
+    }
+  }
+}

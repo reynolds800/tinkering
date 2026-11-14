@@ -26,6 +26,7 @@ extern const App weatherApp;
 extern const App calendarApp;
 extern const App worldClockApp;
 extern const App mapsApp;
+extern const App doublesApp;
 
 void drawCalculatorIcon(int x, int y);
 void drawMessagesIcon(int x, int y);
@@ -35,3 +36,4 @@ void drawWeatherIcon(int x, int y);
 void drawCalendarIcon(int x, int y);
 void drawWorldClockIcon(int x, int y);
 void drawMapsIcon(int x, int y);
+void drawDoublesIcon(int x, int y);
