@@ -126,3 +126,21 @@ void drawWorldClockIcon(int x, int y) {
   lcd.drawWideLine(cx, cy, cx + 8, cy - 17, 1.4f, hand);  // minute hand
   lcd.fillSmoothCircle(cx, cy, 3, 0xFF9500u);
 }
+
+// Maps: a cream map with a park, a river and a road, and a red pin.
+void drawMapsIcon(int x, int y) {
+  const uint32_t paper = 0xF4EBD3u, park = 0x9CD67Bu, water = 0x6CB8F0u, road = 0xFFFFFFu;
+  const uint32_t roadEdge = 0xD9CDAEu, pin = 0xFF453Au;
+  tile(x, y, paper);
+  lcd.fillSmoothRoundRect(x + 8, y + 40, 26, 26, 8, park);
+  lcd.drawWideLine(x + 10, y + 14, x + 34, y + 30, 4.0f, water);
+  lcd.drawWideLine(x + 34, y + 30, x + 66, y + 26, 4.0f, water);
+  lcd.drawWideLine(x + 46, y + 68, x + 22, y + 8, 4.5f, roadEdge);
+  lcd.drawWideLine(x + 46, y + 68, x + 22, y + 8, 3.0f, road);
+
+  // The pin: a disc with a point beneath it and a white centre.
+  int px = x + 52, py = y + 40;
+  lcd.fillTriangle(px - 9, py + 4, px + 9, py + 4, px, py + 20, pin);
+  lcd.fillSmoothCircle(px, py, 11, pin);
+  lcd.fillSmoothCircle(px, py, 4, 0xFFFFFFu);
+}

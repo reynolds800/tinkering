@@ -144,7 +144,7 @@ void platformSaveSetting(const char *key, const std::string &value) {
 static int curlGet(const std::string &url, const std::string &extraArgs, std::string &body) {
   // The address is built from our own settings, but it still goes through a shell.
   if (url.find('\'') != std::string::npos) return -1;
-  std::string command = "curl --silent --max-time 20 --user-agent simulator-github-activity-display " +
+  std::string command = "curl --silent --max-time 20 --user-agent epulse-feather-apps/1.0 " +
                         extraArgs + " --write-out '\\n%{http_code}' '" + url + "'";
   FILE *pipe = popen(command.c_str(), "r");
   if (!pipe) return -1;
@@ -175,6 +175,8 @@ int platformHttpGet(const std::string &url,
   }
   return code;
 }
+
+int platformDownload(const std::string &url, std::string &body) { return curlGet(url, "", body); }
 
 int platformJsonGet(const std::string &url, JsonDocument &doc, const JsonDocument &filter) {
   std::string body;

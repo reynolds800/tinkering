@@ -108,7 +108,7 @@ int platformHttpGet(const std::string &url,
   http.useHTTP10(true);  // no chunked encoding, so the body arrives as plain bytes
   http.setTimeout(15000);
   if (!http.begin(client, url.c_str())) return -1;
-  http.setUserAgent("esp32-github-activity-display");
+  http.setUserAgent("epulse-feather-apps/1.0");
 
   int code = http.GET();
   if (code < 0) code = -1;
@@ -135,6 +135,58 @@ int platformHttpGet(const std::string &url,
   return code;
 }
 
+// A Stream that keeps whatever is written to it, up to a limit.
+class Collector : public Stream {
+public:
+  Collector(std::string &out, size_t limit) : _out(out), _limit(limit) {}
+  size_t write(uint8_t c) override { return write(&c, 1); }
+  size_t write(const uint8_t *data, size_t size) override {
+    if (_out.size() + size > _limit) return 0;
+    _out.append((const char *)data, size);
+    return size;
+  }
+  int available() override { return 0; }
+  int read() override { return -1; }
+  int peek() override { return -1; }
+  void flush() override {}
+
+private:
+  std::string &_out;
+  size_t _limit;
+};
+
+int platformDownload(const std::string &url, std::string &body) {
+  // Kept between calls so that the connection, and the slow secure
+  // handshake that sets it up, can be reused for the next download.
+  static WiFiClientSecure client;
+  static HTTPClient http;
+  static bool configured = false;
+  if (!configured) {
+    // The server certificate is not verified. Only public files are
+    // requested and no credentials are sent.
+    client.setInsecure();
+    http.setReuse(true);
+    http.setTimeout(15000);
+    http.setUserAgent("epulse-feather-apps/1.0");
+    configured = true;
+  }
+
+  body.clear();
+  if (!http.begin(client, url.c_str())) return -1;
+  int code = http.GET();
+  if (code < 0) {
+    http.end();
+    client.stop();
+    return -1;
+  }
+  if (code == HTTP_CODE_OK) {
+    Collector collector(body, 300000);
+    if (http.writeToStream(&collector) < 0) code = -1;
+  }
+  http.end();
+  return code;
+}
+
 bool platformOnline() { return WiFi.status() == WL_CONNECTED; }
 
 int platformJsonGet(const std::string &url, JsonDocument &doc, const JsonDocument &filter) {
@@ -147,7 +199,7 @@ int platformJsonGet(const std::string &url, JsonDocument &doc, const JsonDocumen
   http.useHTTP10(true);  // no chunked encoding, so the body can be parsed as a stream
   http.setTimeout(15000);
   if (!http.begin(client, url.c_str())) return -1;
-  http.setUserAgent("esp32-github-activity-display");
+  http.setUserAgent("epulse-feather-apps/1.0");
 
   int code = http.GET();
   if (code == HTTP_CODE_OK) {

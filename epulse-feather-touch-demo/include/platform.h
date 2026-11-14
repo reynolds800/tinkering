@@ -35,6 +35,12 @@ void platformSaveSetting(const char *key, const std::string &value);
 int platformHttpGet(const std::string &url,
                     const std::function<bool(const char *data, size_t size)> &onData);
 
+// Downloads a whole file, such as an image, into body. Repeated downloads
+// from the same server reuse one connection where they can, which is much
+// quicker. Returns the HTTP status code, or -1 if the server could not be
+// reached.
+int platformDownload(const std::string &url, std::string &body);
+
 // Fetches a web address that answers in JSON into doc, keeping only the
 // fields named in filter. Returns the HTTP status code, -1 if the server
 // could not be reached, or -2 if the reply could not be parsed.
