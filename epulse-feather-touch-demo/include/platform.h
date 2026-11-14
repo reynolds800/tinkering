@@ -17,7 +17,9 @@ bool platformOnline();
 std::string platformDeviceName();
 
 // Local-network chat. Send broadcasts a small packet to everything on the
-// network; receive collects one that has arrived, returning false if none has.
+// network, and also sends it directly to anyone a packet has been received
+// from, which reaches them even on a different part of the network. Receive
+// collects one packet that has arrived, returning false if none has.
 bool platformChatSend(const std::string &packet);
 bool platformChatReceive(std::string &packet);
 

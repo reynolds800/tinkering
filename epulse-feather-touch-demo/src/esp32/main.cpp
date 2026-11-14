@@ -15,6 +15,25 @@ static const uint16_t CHAT_PORT = 47800;
 static WiFiUDP chatSocket;
 static bool chatListening = false;
 
+// Addresses packets have arrived from, so replies can be sent to them directly.
+static const int MAX_PEERS = 8;
+static IPAddress chatPeers[MAX_PEERS];
+static int chatPeerCount = 0;
+
+static void rememberPeer(IPAddress address) {
+  if (address == WiFi.localIP()) return;
+  for (int i = 0; i < chatPeerCount; i++) {
+    if (chatPeers[i] == address) return;
+  }
+  if (chatPeerCount < MAX_PEERS) chatPeers[chatPeerCount++] = address;
+}
+
+static bool sendTo(IPAddress address, const std::string &packet) {
+  if (!chatSocket.beginPacket(address, CHAT_PORT)) return false;
+  chatSocket.write((const uint8_t *)packet.data(), packet.size());
+  return chatSocket.endPacket();
+}
+
 std::string platformDeviceName() { return DEVICE_NAME; }
 
 // The socket can only be opened once WiFi has joined.
@@ -24,15 +43,18 @@ static bool chatReady() {
     chatListening = false;
     return false;
   }
-  if (!chatListening) chatListening = chatSocket.begin(CHAT_PORT);
+  if (!chatListening) {
+    chatListening = chatSocket.begin(CHAT_PORT);
+    Serial.printf("WiFi connected: %s\n", WiFi.localIP().toString().c_str());
+  }
   return chatListening;
 }
 
 bool platformChatSend(const std::string &packet) {
   if (!chatReady()) return false;
-  if (!chatSocket.beginPacket(IPAddress(255, 255, 255, 255), CHAT_PORT)) return false;
-  chatSocket.write((const uint8_t *)packet.data(), packet.size());
-  return chatSocket.endPacket();
+  bool sent = sendTo(IPAddress(255, 255, 255, 255), packet);
+  for (int i = 0; i < chatPeerCount; i++) sendTo(chatPeers[i], packet);
+  return sent;
 }
 
 bool platformChatReceive(std::string &packet) {
@@ -43,6 +65,7 @@ bool platformChatReceive(std::string &packet) {
   int n = chatSocket.read(buf, sizeof(buf));
   chatSocket.flush();  // discard anything beyond the buffer
   if (n <= 0) return false;
+  rememberPeer(chatSocket.remoteIP());
   packet.assign(buf, n);
   return true;
 }

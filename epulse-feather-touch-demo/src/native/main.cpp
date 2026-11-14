@@ -3,6 +3,8 @@
 //
 //   program                       open a window; click to "tap" the screen
 //   program --name Bob            the name shown on messages sent from here
+//   program --peer 192.168.4.141  also send messages directly to this address,
+//                                 for a device on a different part of the network
 //   program --tap 50,90 --screenshot out.bmp
 //                                 tap those positions in order, save the
 //                                 screen and exit (--tap may be repeated)
@@ -35,6 +37,17 @@ static const uint16_t CHAT_PORT = 47800;
 
 std::string platformDeviceName() { return deviceName; }
 
+// Addresses to send to directly: any given with --peer, plus any that packets
+// have arrived from.
+static std::vector<in_addr_t> chatPeers;
+
+static void rememberPeer(in_addr_t address) {
+  for (in_addr_t known : chatPeers) {
+    if (known == address) return;
+  }
+  if (chatPeers.size() < 8) chatPeers.push_back(address);
+}
+
 // One UDP socket, shared for sending and receiving. Address and port reuse
 // let several simulators on one computer all hear the same broadcasts.
 static int chatSocket() {
@@ -64,18 +77,26 @@ bool platformChatSend(const std::string &packet) {
   if (fd < 0) return false;
   sockaddr_in to = {};
   to.sin_family = AF_INET;
-  to.sin_addr.s_addr = htonl(INADDR_BROADCAST);
   to.sin_port = htons(CHAT_PORT);
-  return sendto(fd, packet.data(), packet.size(), 0, (sockaddr *)&to, sizeof(to)) ==
-         (ssize_t)packet.size();
+  to.sin_addr.s_addr = htonl(INADDR_BROADCAST);
+  bool sent = sendto(fd, packet.data(), packet.size(), 0, (sockaddr *)&to, sizeof(to)) ==
+              (ssize_t)packet.size();
+  for (in_addr_t peer : chatPeers) {
+    to.sin_addr.s_addr = peer;
+    sendto(fd, packet.data(), packet.size(), 0, (sockaddr *)&to, sizeof(to));
+  }
+  return sent;
 }
 
 bool platformChatReceive(std::string &packet) {
   int fd = chatSocket();
   if (fd < 0) return false;
   char buf[512];
-  ssize_t n = recv(fd, buf, sizeof(buf), 0);
+  sockaddr_in from = {};
+  socklen_t fromSize = sizeof(from);
+  ssize_t n = recvfrom(fd, buf, sizeof(buf), 0, (sockaddr *)&from, &fromSize);
   if (n <= 0) return false;
+  rememberPeer(from.sin_addr.s_addr);
   packet.assign(buf, n);
   return true;
 }
@@ -156,8 +177,10 @@ int main(int argc, char **argv) {
       waitMs = atoi(argv[++i]);
     } else if (arg == "--name" && i + 1 < argc) {
       deviceName = argv[++i];
+    } else if (arg == "--peer" && i + 1 < argc && inet_addr(argv[i + 1]) != INADDR_NONE) {
+      rememberPeer(inet_addr(argv[++i]));
     } else {
-      fprintf(stderr, "Usage: %s [--name text] [--tap x,y]... [--wait ms] [--screenshot file.bmp]\n",
+      fprintf(stderr, "Usage: %s [--name text] [--peer address] [--tap x,y]... [--wait ms] [--screenshot file.bmp]\n",
               argv[0]);
       return 2;
     }

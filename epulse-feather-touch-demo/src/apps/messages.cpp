@@ -7,6 +7,7 @@
 #include <deque>
 #include <random>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "apps.h"
@@ -60,6 +61,18 @@ static std::string printable(const char *s, size_t maxLength) {
     if (*s >= 32 && *s < 127) out += *s;
   }
   return out;
+}
+
+// A message can arrive twice (by broadcast and directly), so recent ones are
+// remembered by sender and number.
+static bool alreadySeen(uint32_t src, uint32_t id) {
+  static std::deque<std::pair<uint32_t, uint32_t>> seen;
+  for (auto &entry : seen) {
+    if (entry.first == src && entry.second == id) return true;
+  }
+  seen.emplace_back(src, id);
+  if (seen.size() > 32) seen.pop_front();
+  return false;
 }
 
 static void addMessage(const std::string &from, const std::string &text, bool mine) {
@@ -183,7 +196,9 @@ static void send() {
 
   JsonDocument doc;
   doc["app"] = "epulse-messages";
+  static uint32_t nextId = 1;
   doc["src"] = instanceId();
+  doc["id"] = nextId++;
   doc["from"] = platformDeviceName();
   doc["text"] = text;
   std::string packet;
@@ -197,13 +212,27 @@ static void send() {
 
 // Collects any messages that have arrived. Runs whether or not the app is open.
 static void receive() {
+  // Say hello once the network is up, so others learn where to reach us.
+  // It has no text, so nobody shows it as a message.
+  static bool announced = false;
+  if (!announced) {
+    JsonDocument hello;
+    hello["app"] = "epulse-messages";
+    hello["src"] = instanceId();
+    std::string out;
+    serializeJson(hello, out);
+    announced = platformChatSend(out);
+  }
+
   std::string packet;
   bool changed = false;
   while (platformChatReceive(packet)) {
     JsonDocument doc;
     if (deserializeJson(doc, packet)) continue;
     if (std::string(doc["app"] | "") != "epulse-messages") continue;
-    if ((doc["src"] | 0u) == instanceId()) continue;  // our own broadcast coming back
+    uint32_t src = doc["src"] | 0u;
+    if (src == instanceId()) continue;  // our own broadcast coming back
+    if (alreadySeen(src, doc["id"] | 0u)) continue;
     std::string from = printable(doc["from"] | "", 16);
     std::string text = printable(doc["text"] | "", MAX_TEXT);
     if (text.empty()) continue;
