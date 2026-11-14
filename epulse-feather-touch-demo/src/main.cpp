@@ -6,10 +6,10 @@
 #include <Wire.h>
 
 // Portrait, same orientation as the ThingPulse sample. Raw touch coordinates
-// line up with this rotation. If touches land mirrored, flip these.
+// are rotated 180 degrees from this rotation, so both axes are flipped.
 static const uint8_t TFT_ROTATION = 2;
-static const bool TOUCH_FLIP_X = false;
-static const bool TOUCH_FLIP_Y = false;
+static const bool TOUCH_FLIP_X = true;
+static const bool TOUCH_FLIP_Y = true;
 
 static const uint8_t FT6236_ADDR = 0x38;
 static const uint8_t FT6236_REG_NUM_TOUCHES = 0x02;
